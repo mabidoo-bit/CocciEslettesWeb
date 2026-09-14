@@ -1,4 +1,4 @@
-const CACHE_NAME = "cocci-eslettes-v2";
+const CACHE_NAME = "cocci-eslettes-v5";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
@@ -6,8 +6,8 @@ const FILES_TO_CACHE = [
   "./products.js",
   "./payment.js",
   "./manifest.json",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
+  "./icon-192.png",
+  "./icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {
