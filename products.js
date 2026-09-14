@@ -2,10 +2,9 @@
 // Chaque produit a une catégorie ("category") qui sert à le classer.
 // Modifiez librement cette liste pour refléter les vrais produits de votre magasin.
 
-const CATEGORIES = [
+let CATEGORIES = [
   { id: "fruits", name: "Fruits", emoji: "🍎" },
   { id: "legumes", name: "Légumes", emoji: "🥬" },
-  { id: "boucherie", name: "Boucherie & Volaille", emoji: "🥩" },
   { id: "charcuterie", name: "Charcuterie", emoji: "🥓" },
   { id: "poissonnerie", name: "Poissonnerie", emoji: "🐟" },
   { id: "fromages", name: "Fromages", emoji: "🧀" },
@@ -23,7 +22,7 @@ const CATEGORIES = [
   { id: "boulangerie", name: "Boulangerie", emoji: "🍞" },
 ];
 
-const PRODUCTS = [
+let PRODUCTS = [
   // Fruits
   { id: "1", name: "Pommes Golden", priceCents: 290, unit: "kg", emoji: "🍎", category: "fruits" },
   { id: "2", name: "Pommes Gala", priceCents: 310, unit: "kg", emoji: "🍎", category: "fruits" },
@@ -87,28 +86,6 @@ const PRODUCTS = [
   { id: "58", name: "Poireaux", priceCents: 240, unit: "kg", emoji: "🥬", category: "legumes" },
   { id: "59", name: "Persil", priceCents: 90, unit: "botte", emoji: "🌿", category: "legumes" },
   { id: "60", name: "Navets", priceCents: 170, unit: "kg", emoji: "🥔", category: "legumes" },
-
-  // Boucherie & Volaille
-  { id: "61", name: "Poulet entier", priceCents: 690, unit: "kg", emoji: "🍗", category: "boucherie" },
-  { id: "62", name: "Blanc de poulet", priceCents: 990, unit: "kg", emoji: "🍗", category: "boucherie" },
-  { id: "63", name: "Cuisses de poulet", priceCents: 590, unit: "kg", emoji: "🍗", category: "boucherie" },
-  { id: "64", name: "Ailes de poulet", priceCents: 490, unit: "kg", emoji: "🍗", category: "boucherie" },
-  { id: "65", name: "Dinde escalope", priceCents: 890, unit: "kg", emoji: "🦃", category: "boucherie" },
-  { id: "66", name: "Canard filet", priceCents: 990, unit: "unité", emoji: "🦆", category: "boucherie" },
-  { id: "67", name: "Steak haché 5%", priceCents: 990, unit: "kg", emoji: "🥩", category: "boucherie" },
-  { id: "68", name: "Steak haché 15%", priceCents: 890, unit: "kg", emoji: "🥩", category: "boucherie" },
-  { id: "69", name: "Entrecôte", priceCents: 1890, unit: "kg", emoji: "🥩", category: "boucherie" },
-  { id: "70", name: "Faux-filet", priceCents: 1690, unit: "kg", emoji: "🥩", category: "boucherie" },
-  { id: "71", name: "Rumsteck", priceCents: 1590, unit: "kg", emoji: "🥩", category: "boucherie" },
-  { id: "72", name: "Bavette", priceCents: 1490, unit: "kg", emoji: "🥩", category: "boucherie" },
-  { id: "73", name: "Rôti de bœuf", priceCents: 1690, unit: "kg", emoji: "🥩", category: "boucherie" },
-  { id: "74", name: "Côte de bœuf", priceCents: 2290, unit: "kg", emoji: "🥩", category: "boucherie" },
-  { id: "75", name: "Escalope de veau", priceCents: 1890, unit: "kg", emoji: "🥩", category: "boucherie" },
-  { id: "76", name: "Blanquette de veau", priceCents: 1490, unit: "kg", emoji: "🥩", category: "boucherie" },
-  { id: "77", name: "Côtelettes d'agneau", priceCents: 1990, unit: "kg", emoji: "🍖", category: "boucherie" },
-  { id: "78", name: "Gigot d'agneau", priceCents: 1890, unit: "kg", emoji: "🍖", category: "boucherie" },
-  { id: "79", name: "Épaule d'agneau", priceCents: 1690, unit: "kg", emoji: "🍖", category: "boucherie" },
-  { id: "80", name: "Côtes de porc", priceCents: 990, unit: "kg", emoji: "🥩", category: "boucherie" },
 
   // Charcuterie
   { id: "81", name: "Rillettes de volaille", priceCents: 280, unit: "unité", emoji: "🥫", category: "charcuterie" },

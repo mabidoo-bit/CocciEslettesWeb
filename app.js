@@ -2,7 +2,41 @@
 // Pour les produits vendus au kg (Fruits, Légumes) : cart[id] = { weightKg: 0.5 }
 // Pour les autres produits (vendus à l'unité) : cart[id] = { qty: 2 }
 let cart = JSON.parse(localStorage.getItem("cocci_cart") || "{}");
-let activeCategory = CATEGORIES[0].id;
+let activeCategory = null;
+let orderType = "retrait"; // "retrait" (drive) ou "livraison"
+
+function setOrderType(type) {
+  orderType = type;
+}
+
+// ---- Chargement du catalogue (Firestore en priorité, sinon version locale) ----
+async function loadCatalog() {
+  try {
+    const catSnapshot = await db.collection("categories").orderBy("order").get();
+    const prodSnapshot = await db.collection("products").get();
+
+    if (!catSnapshot.empty && !prodSnapshot.empty) {
+      CATEGORIES = catSnapshot.docs.map(doc => doc.data());
+      PRODUCTS = prodSnapshot.docs.map(doc => doc.data()).filter(p => p.inStock !== false);
+      window.ALL_PRODUCTS_INCLUDING_OUT_OF_STOCK = prodSnapshot.docs.map(doc => doc.data());
+    } else {
+      window.ALL_PRODUCTS_INCLUDING_OUT_OF_STOCK = PRODUCTS;
+    }
+  } catch (err) {
+    console.error("Catalogue Firestore indisponible, utilisation de la version locale.", err);
+    window.ALL_PRODUCTS_INCLUDING_OUT_OF_STOCK = PRODUCTS;
+  }
+
+  // Ajoute l'onglet Promotions s'il y a au moins un produit en promo
+  const hasPromo = window.ALL_PRODUCTS_INCLUDING_OUT_OF_STOCK.some(p => p.isPromo);
+  if (hasPromo && !CATEGORIES.some(c => c.id === "promotions")) {
+    CATEGORIES = [{ id: "promotions", name: "Promotions", emoji: "🔥" }, ...CATEGORIES];
+  }
+
+  activeCategory = CATEGORIES[0].id;
+  renderCategoryTabs();
+  renderProducts();
+}
 
 const WEIGHT_OPTIONS = [
   { label: "250 g", value: 0.25 },
@@ -48,8 +82,12 @@ function selectCategory(categoryId) {
 // ---- Affichage du catalogue (filtré par rayon actif) ----
 function renderProducts() {
   const list = document.getElementById("productList");
-  const productsInCategory = PRODUCTS.filter(p => p.category === activeCategory);
   const category = CATEGORIES.find(c => c.id === activeCategory);
+
+  const source = window.ALL_PRODUCTS_INCLUDING_OUT_OF_STOCK || PRODUCTS;
+  const productsInCategory = activeCategory === "promotions"
+    ? source.filter(p => p.isPromo)
+    : source.filter(p => p.category === activeCategory);
 
   list.innerHTML = `<h2 class="category-title">${category.emoji} ${category.name}</h2>`;
 
@@ -72,21 +110,25 @@ function renderUnitProduct(p) {
   wrapper.className = "product-inner";
   const entry = cart[p.id];
   const qty = entry ? entry.qty : 0;
+  const outOfStock = p.inStock === false;
 
   wrapper.innerHTML = `
     <div class="emoji">${p.emoji}</div>
     <div class="info">
-      <div class="name">${p.name}</div>
+      <div class="name">${p.name}${p.isPromo ? " 🔥" : ""}</div>
       <div class="price">${formatPrice(p.priceCents)} / ${p.unit}</div>
+      ${outOfStock ? '<div class="price" style="color:#d33;">Rupture de stock</div>' : ""}
     </div>
     <div class="qty-controls">
-      ${qty === 0
-        ? `<button class="add-btn" onclick="changeUnitQty('${p.id}', 1)">Ajouter</button>`
-        : `
-          <button onclick="changeUnitQty('${p.id}', -1)">−</button>
-          <span>${qty}</span>
-          <button onclick="changeUnitQty('${p.id}', 1)">+</button>
-        `
+      ${outOfStock
+        ? `<button class="add-btn" disabled style="opacity:0.4;">Indisponible</button>`
+        : qty === 0
+          ? `<button class="add-btn" onclick="changeUnitQty('${p.id}', 1)">Ajouter</button>`
+          : `
+            <button onclick="changeUnitQty('${p.id}', -1)">−</button>
+            <span>${qty}</span>
+            <button onclick="changeUnitQty('${p.id}', 1)">+</button>
+          `
       }
     </div>
   `;
@@ -98,6 +140,7 @@ function renderWeightedProduct(p) {
   wrapper.className = "product-inner";
   const entry = cart[p.id];
   const currentWeight = entry ? entry.weightKg : null;
+  const outOfStock = p.inStock === false;
 
   const options = WEIGHT_OPTIONS.map(opt =>
     `<option value="${opt.value}" ${currentWeight === opt.value ? "selected" : ""}>${opt.label}</option>`
@@ -106,17 +149,23 @@ function renderWeightedProduct(p) {
   wrapper.innerHTML = `
     <div class="emoji">${p.emoji}</div>
     <div class="info">
-      <div class="name">${p.name}</div>
+      <div class="name">${p.name}${p.isPromo ? " 🔥" : ""}</div>
       <div class="price">${formatPrice(p.priceCents)} / ${p.unit}</div>
+      ${outOfStock ? '<div class="price" style="color:#d33;">Rupture de stock</div>' : ""}
     </div>
     <div class="qty-controls weight-controls">
-      <select onchange="setWeight('${p.id}', this.value)">
-        <option value="" ${currentWeight ? "" : "selected"} disabled>Poids</option>
-        ${options}
-      </select>
-      ${currentWeight
-        ? `<button class="remove-btn" onclick="removeFromCart('${p.id}')">✕</button>`
-        : ""
+      ${outOfStock
+        ? `<button class="add-btn" disabled style="opacity:0.4;">Indisponible</button>`
+        : `
+          <select onchange="setWeight('${p.id}', this.value)">
+            <option value="" ${currentWeight ? "" : "selected"} disabled>Poids</option>
+            ${options}
+          </select>
+          ${currentWeight
+            ? `<button class="remove-btn" onclick="removeFromCart('${p.id}')">✕</button>`
+            : ""
+          }
+        `
       }
     </div>
   `;
@@ -186,7 +235,10 @@ function renderCartItems() {
       return `
         <div class="cart-row">
           <span>${label}</span>
-          <span>${formatPrice(lineTotalCents(product, entry))}</span>
+          <span class="cart-row-right">
+            ${formatPrice(lineTotalCents(product, entry))}
+            <button class="cart-remove-btn" onclick="removeFromCart('${id}')">🗑️</button>
+          </span>
         </div>
       `;
     }).join("");
@@ -204,15 +256,33 @@ function closeCart() {
   document.getElementById("cartPanel").classList.remove("open");
 }
 
-function startCheckout() {
+async function startCheckout() {
   if (cartTotalCents() === 0) {
     alert("Votre panier est vide.");
     return;
   }
-  goToCheckout(cart, cartTotalCents());
+
+  let deliveryAddress = null;
+
+  if (orderType === "livraison") {
+    if (!auth.currentUser) {
+      alert("Pour une livraison, connectez-vous ou créez un compte, puis renseignez votre adresse.");
+      closeCart();
+      openAccount();
+      return;
+    }
+    deliveryAddress = await getSavedDeliveryAddress();
+    if (!deliveryAddress || !deliveryAddress.address) {
+      alert("Merci de renseigner votre adresse de livraison dans votre compte avant de payer.");
+      closeCart();
+      openAccount();
+      return;
+    }
+  }
+
+  goToCheckout(cart, cartTotalCents(), orderType, deliveryAddress);
 }
 
 // Premier affichage
-renderCategoryTabs();
-renderProducts();
+loadCatalog();
 renderCartBadge();

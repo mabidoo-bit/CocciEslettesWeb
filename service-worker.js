@@ -1,4 +1,4 @@
-const CACHE_NAME = "cocci-eslettes-v5";
+const CACHE_NAME = "cocci-eslettes-v6";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
