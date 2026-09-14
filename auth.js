@@ -19,6 +19,9 @@ function renderAccountPanel() {
       <p>Connectez-vous ou créez un compte pour enregistrer vos adresses
       et commander plus rapidement.</p>
 
+      <label>Nom complet (pour un nouveau compte)</label>
+      <input type="text" id="authName" placeholder="Votre nom">
+
       <label>Adresse e-mail</label>
       <input type="email" id="authEmail" placeholder="vous@exemple.com">
 
@@ -36,8 +39,11 @@ function renderAccountPanel() {
 
   // Utilisateur connecté : afficher ses infos + formulaire d'adresses
   container.innerHTML = `
-    <h2>Mon compte</h2>
+    <h2>Bonjour${window.currentUserName ? " " + window.currentUserName : ""} 👋</h2>
     <p class="account-email">${user.email}</p>
+
+    <label>Nom complet</label>
+    <input type="text" id="accountName" placeholder="Votre nom">
 
     <h3>📦 Adresse de livraison</h3>
     <label>Nom complet</label>
@@ -83,6 +89,7 @@ function toggleBillingFields() {
 }
 
 async function handleSignup() {
+  const name = document.getElementById("authName").value.trim();
   const email = document.getElementById("authEmail").value.trim();
   const password = document.getElementById("authPassword").value;
   const errorBox = document.getElementById("authError");
@@ -94,7 +101,11 @@ async function handleSignup() {
   }
 
   try {
-    await auth.createUserWithEmailAndPassword(email, password);
+    const cred = await auth.createUserWithEmailAndPassword(email, password);
+    if (name) {
+      await db.collection("users").doc(cred.user.uid).set({ name, email }, { merge: true });
+      window.currentUserName = name;
+    }
     renderAccountPanel();
   } catch (err) {
     errorBox.textContent = translateAuthError(err);
@@ -122,6 +133,7 @@ async function handleLogin() {
 
 async function handleLogout() {
   await auth.signOut();
+  window.currentUserName = null;
   renderAccountPanel();
 }
 
@@ -145,6 +157,12 @@ async function loadAddresses() {
     const doc = await db.collection("users").doc(user.uid).get();
     if (!doc.exists) return;
     const data = doc.data();
+
+    if (data.name) {
+      document.getElementById("accountName").value = data.name;
+      window.currentUserName = data.name;
+      updateAccountButtonLabel();
+    }
 
     if (data.delivery) {
       document.getElementById("delName").value = data.delivery.name || "";
@@ -172,6 +190,7 @@ async function saveAddresses() {
   const user = auth.currentUser;
   if (!user) return;
 
+  const name = document.getElementById("accountName").value.trim();
   const sameAsDelivery = document.getElementById("billSameAsDelivery").checked;
 
   const delivery = {
@@ -195,17 +214,32 @@ async function saveAddresses() {
 
   try {
     await db.collection("users").doc(user.uid).set({
+      name,
       email: user.email,
       delivery,
       billing,
       billingSameAsDelivery: sameAsDelivery,
     }, { merge: true });
 
+    window.currentUserName = name;
+    updateAccountButtonLabel();
+
     msg.textContent = "✅ Adresses enregistrées !";
-    setTimeout(() => { msg.textContent = ""; }, 3000);
+
+    // Ferme automatiquement le panneau et revient aux achats après un court délai
+    setTimeout(() => {
+      closeAccount();
+    }, 1200);
   } catch (err) {
     msg.textContent = "Erreur lors de l'enregistrement.";
     console.error(err);
+  }
+}
+
+function updateAccountButtonLabel() {
+  const btn = document.getElementById("accountBtn");
+  if (btn && window.currentUserName) {
+    btn.textContent = "👤 " + window.currentUserName;
   }
 }
 
@@ -219,9 +253,22 @@ async function getSavedDeliveryAddress() {
 }
 
 // Met à jour l'affichage du bouton "Mon compte" selon l'état de connexion
-auth.onAuthStateChanged((user) => {
+auth.onAuthStateChanged(async (user) => {
   const btn = document.getElementById("accountBtn");
+  if (!user) {
+    window.currentUserName = null;
+    if (btn) btn.textContent = "👤 Connexion";
+    return;
+  }
+
+  try {
+    const doc = await db.collection("users").doc(user.uid).get();
+    window.currentUserName = doc.exists ? doc.data().name : null;
+  } catch (err) {
+    window.currentUserName = null;
+  }
+
   if (btn) {
-    btn.textContent = user ? "👤 Mon compte" : "👤 Connexion";
+    btn.textContent = window.currentUserName ? "👤 " + window.currentUserName : "👤 Mon compte";
   }
 });
