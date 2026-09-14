@@ -41,6 +41,7 @@ function renderAccountPanel() {
   container.innerHTML = `
     <h2>Bonjour${window.currentUserName ? " " + window.currentUserName : ""} 👋</h2>
     <p class="account-email">${user.email}</p>
+    <p style="font-size:0.75rem;color:#aaa;word-break:break-all;">ID technique : ${user.uid}</p>
 
     <label>Nom complet</label>
     <input type="text" id="accountName" placeholder="Votre nom">
